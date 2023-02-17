@@ -4952,6 +4952,8 @@ static int fts_probe(struct spi_device *client)
 	if (error < OK)
 		logError(1, "%s Error: can not create /proc file! \n", tag);
 
+	device_init_wakeup(&client->dev, 1);
+
 #ifdef CONFIG_TOUCHSCREEN_ST_DEBUG_FS
 	info->debugfs = debugfs_create_dir("tp_debug", NULL);
 	if (info->debugfs) {
