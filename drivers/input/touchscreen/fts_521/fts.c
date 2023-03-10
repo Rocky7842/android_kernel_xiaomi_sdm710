@@ -2981,6 +2981,9 @@ static void fts_user_report_event_handler(struct fts_ts_info *info,
 
 }
 
+/* EventId : EVT_ID_USER_REPORT */
+#define fts_user_report_event_handler fts_gesture_event_handler
+
 /**
  * Bottom Half Interrupt Handler function
  * This handler is called each time there is at least one new event in the FIFO and the interrupt pin of the IC goes low.
