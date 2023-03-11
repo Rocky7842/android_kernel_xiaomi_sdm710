@@ -3304,7 +3304,7 @@ static int fts_chip_initialization(struct fts_ts_info *info, int init_type)
 *	Respond to the interrupt and schedule the bottom half interrupt handler in its work queue
 *	@see fts_event_handler()
 */
-
+/*
 static irqreturn_t fts_interrupt_handler(int irq, void *handle)
 {
 	struct fts_ts_info *info = handle;
@@ -3314,7 +3314,7 @@ static irqreturn_t fts_interrupt_handler(int irq, void *handle)
 
 	return IRQ_HANDLED;
 }
-
+*/
 /**
 *	Initialize the dispatch table with the event handlers for any possible event ID and the interrupt routine behavior (triggered when the IRQ pin is low and associating the top half interrupt handler function).
 *	@see fts_interrupt_handler()
