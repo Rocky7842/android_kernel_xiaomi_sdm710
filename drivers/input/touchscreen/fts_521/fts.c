@@ -4791,7 +4791,6 @@ static int fts_probe(struct spi_device *client)
 	input_set_drvdata(info->input_dev, info);
 
 	__set_bit(EV_SYN, info->input_dev->evbit);
-	__set_bit(EV_KEY, info->input_dev->evbit);
 	__set_bit(EV_ABS, info->input_dev->evbit);
 	__set_bit(BTN_TOUCH, info->input_dev->keybit);
 	__set_bit(BTN_TOOL_FINGER, info->input_dev->keybit);
