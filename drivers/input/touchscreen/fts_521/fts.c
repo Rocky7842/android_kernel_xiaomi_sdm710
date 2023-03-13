@@ -3139,7 +3139,9 @@ static void fts_power_supply_work(struct work_struct *work)
 	if (charging_status != fts_info->charging_status ||
 	    fts_info->charging_status < 0) {
 		fts_info->charging_status = charging_status;
+#ifdef CONFIG_TOUCHSCREEN_XIAOMI_TOUCHFEATURE
 		fts_write_charge_status(charging_status);
+#endif
 	}
 }
 
@@ -3910,7 +3912,9 @@ static void fts_leave_pointer_event_handler(struct fts_ts_info *info,
 		info->fod_coordinate_update = false;
 		info->fod_x = 0;
 		info->fod_y = 0;
+#ifdef CONFIG_TOUCHSCREEN_FOD
 		info->fod_down = false;
+#endif
 	}
 	input_mt_report_slot_state(info->input_dev, tool, 0);
 	if (info->touch_id == 0) {
@@ -3929,15 +3933,19 @@ static void fts_leave_pointer_event_handler(struct fts_ts_info *info,
 		info->fod_id = 0;
 	}
 	input_report_abs(info->input_dev, ABS_MT_TRACKING_ID, -1);
+#ifdef CONFIG_TOUCHSCREEN_FOD
 	if (fod_up) {
 		info->fod_down = false;
 		MI_TOUCH_LOGI(
 			1, "%s %s:  FOD Up  release ID[%d], FOD status: %d\n",
 			tag, __func__, touchId, info->fod_status);
 	} else {
+#endif
 		MI_TOUCH_LOGI(1, "%s %s:  Event 0x%02x - release ID[%d]\n", tag,
 			      __func__, event[0], touchId);
+#ifdef CONFIG_TOUCHSCREEN_FOD
 	}
+#endif
 
 	input_sync(info->input_dev);
 exit:
@@ -5355,9 +5363,12 @@ static int fts_mode_handler(struct fts_ts_info *info, int force)
 	switch (info->resume_bit) {
 	case 0:
 		MI_TOUCH_LOGI(1, "%s %s: Screen OFF... \n", tag, __func__);
+#ifdef CONFIG_TOUCHSCREEN_FOD
 		gesture_type = fts_need_enter_lp_mode();
 		gesture_cmd[5] = gesture_type;
+#endif
 #ifndef CONFIG_FACTORY_BUILD
+#ifdef CONFIG_TOUCHSCREEN_FOD
 		if (gesture_type) {
 			if (info->gesture_enabled == 1)
 				gesture_cmd[2] = 0x20;
@@ -5373,6 +5384,7 @@ static int fts_mode_handler(struct fts_ts_info *info, int force)
 			ret = setScanMode(SCAN_MODE_LOW_POWER, 0);
 			res |= ret;
 		} else {
+#endif
 #endif
 			if (info->gesture_enabled == 1) {
 				MI_TOUCH_LOGI(1,
@@ -5395,7 +5407,9 @@ static int fts_mode_handler(struct fts_ts_info *info, int force)
 				res |= ret;
 			}
 #ifndef CONFIG_FACTORY_BUILD
+#ifdef CONFIG_TOUCHSCREEN_FOD
 		}
+#endif
 #endif
 		setSystemResetedDown(0);
 		break;
@@ -6544,8 +6558,10 @@ static void fts_resume_work(struct work_struct *work)
 #endif
 #endif
 	fts_mode_handler(info, 0);
+#ifdef CONFIG_TOUCHSCREEN_XIAOMI_TOUCHFEATURE
 	if (info->probe_ok)
 		fts_write_charge_status(info->charging_status);
+#endif
 	info->sensor_sleep = false;
 	info->sleep_finger = 0;
 
@@ -8246,9 +8262,13 @@ static int fts_probe(struct spi_device *client)
 #ifdef CONFIG_DRM
 	info->notifier = fts_noti_block;
 #endif
+#ifdef CONFIG_TOUCHSCREEN_XIAOMI_TOUCHFEATURE
 	INIT_DELAYED_WORK(&info->power_supply_work, fts_power_supply_work);
+#endif
 	info->charging_status = -1;
+#ifdef CONFIG_TOUCHSCREEN_XIAOMI_TOUCHFEATURE
 	info->power_supply_notifier.notifier_call = fts_power_supply_event;
+#endif
 	power_supply_reg_notifier(&info->power_supply_notifier);
 	mutex_init(&info->charge_lock);
 #ifdef CONFIG_BL_CALLBACK
