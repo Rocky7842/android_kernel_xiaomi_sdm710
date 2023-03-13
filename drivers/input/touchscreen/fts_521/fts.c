@@ -144,6 +144,9 @@ static int fts_mode_handler(struct fts_ts_info *info, int force);
 static int fts_set_cur_value(int mode, int value);
 #endif
 extern int power_supply_is_system_supplied(void);
+#ifndef CONFIG_TOUCHSCREEN_XIAOMI_TOUCHFEATURE
+int mi_log_level=3;
+#endif
 
 /**
 * Release all the touches in the linux input subsystem
