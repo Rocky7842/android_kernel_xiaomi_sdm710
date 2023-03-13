@@ -31,6 +31,7 @@
 #include "ftsTime.h"
 #include "ftsTool.h"
 
+extern struct fts_ts_info *fts_info;
 /** @addtogroup system_info
 * @{
 */
@@ -38,9 +39,9 @@ SysInfo systemInfo;							/*Global System Info variable, accessible in all the d
 /** @}*/
 
 static int reset_gpio = GPIO_NOT_DEFINED;	/*gpio number of the rest pin, the value is  GPIO_NOT_DEFINED if the reset pin is not connected*/
-static int system_reseted_up = 0;			/*flag checked during resume to understand if there was a system reset and restore the proper state*/
-static int system_reseted_down = 0;		/*flag checked during suspend to understand if there was a system reset and restore the proper state*/
-static int disable_irq_count = 0;			/*count the number of call to disable_irq, start with 1 because at the boot IRQ are already disabled*/
+static int system_reseted_up;			/*flag checked during resume to understand if there was a system reset and restore the proper state*/
+static int system_reseted_down;		/*flag checked during suspend to understand if there was a system reset and restore the proper state*/
+static int disable_irq_count;			/*count the number of call to disable_irq, start with 1 because at the boot IRQ are already disabled*/
 spinlock_t fts_int;						/*spinlock to controll the access to the disable_irq_counter*/
 
 /**
@@ -73,7 +74,7 @@ int initCore(struct fts_ts_info *info)
 void setResetGpio(int gpio)
 {
 	reset_gpio = gpio;
-	logError(1, "%s setResetGpio: reset_gpio = %d\n", tag, reset_gpio);
+	logError(0, "%s setResetGpio: reset_gpio = %d\n", tag, reset_gpio);
 }
 
 /**
@@ -81,7 +82,7 @@ void setResetGpio(int gpio)
 * If the reset pin is associated to a gpio, the function execute an hw reset (toggling of reset pin) otherwise send an hw command to the IC
 * @return OK if success or an error code which specify the type of error encountered
 */
-int fts_system_reset()
+int fts_system_reset(void)
 {
 	u8 readData[FIFO_EVENT_SIZE];
 	int event_to_search;
@@ -90,10 +91,14 @@ int fts_system_reset()
 	u8 data[1] = { SYSTEM_RESET_VALUE };
 	event_to_search = (int)EVT_ID_CONTROLLER_READY;
 
-	logError(0, "%s System resetting...\n", tag);
+	MI_TOUCH_LOGI(1, "%s %s: enter\n", tag, __func__);
+	if (fts_info) {
+		reinit_completion(&fts_info->tp_reset_completion);
+		atomic_set(&fts_info->system_is_resetting, 1);
+	}
 	for (i = 0; i < RETRY_SYSTEM_RESET && res < 0; i++) {
 		resetErrorList();
-		fts_disableInterrupt();
+		fts_disableInterruptNoSync();
 
 		if (reset_gpio == GPIO_NOT_DEFINED) {
 			res =
@@ -107,25 +112,24 @@ int fts_system_reset()
 			res = OK;
 		}
 		if (res < OK) {
-			logError(1, "%s fts_system_reset: ERROR %08X\n", tag,
-				 ERROR_BUS_W);
+			MI_TOUCH_LOGE(1, "%s %s: ERROR %08X\n", tag, __func__, ERROR_BUS_W);
 		} else {
-			res =
-			    pollForEvent(&event_to_search, 1, readData,
-					 GENERAL_TIMEOUT);
+			res = pollForEvent(&event_to_search, 1, readData, GENERAL_TIMEOUT);
 			if (res < OK) {
-				logError(1, "%s fts_system_reset: ERROR %08X\n",
-					 tag, res);
+				MI_TOUCH_LOGE(1, "%s %s: ERROR %08X\n", tag, __func__, res);
 			}
 		}
 	}
+	if (fts_info) {
+		complete(&fts_info->tp_reset_completion);
+		atomic_set(&fts_info->system_is_resetting, 0);
+	}
 	if (res < OK) {
-		logError(1,
-			 "%s fts_system_reset...failed after 3 attempts: ERROR %08X\n",
-			 tag, (res | ERROR_SYSTEM_RESET_FAIL));
+		MI_TOUCH_LOGE(1, "%s %s: failed after 3 attempts: ERROR %08X\n",
+			tag, __func__, (res | ERROR_SYSTEM_RESET_FAIL));
 		return (res | ERROR_SYSTEM_RESET_FAIL);
 	} else {
-		logError(0, "%s System reset DONE!\n", tag);
+		MI_TOUCH_LOGI(1, "%s %s: exit\n", tag, __func__);
 		system_reseted_down = 1;
 		system_reseted_up = 1;
 		return OK;
@@ -137,7 +141,7 @@ int fts_system_reset()
 * Return the value of system_resetted_down.
 * @return the flag value: 0 if not set, 1 if set
 */
-int isSystemResettedDown()
+int isSystemResettedDown(void)
 {
 	return system_reseted_down;
 }
@@ -146,7 +150,7 @@ int isSystemResettedDown()
 * Return the value of system_resetted_up.
 * @return the flag value: 0 if not set, 1 if set
 */
-int isSystemResettedUp()
+int isSystemResettedUp(void)
 {
 	return system_reseted_up;
 }
@@ -181,7 +185,7 @@ void setSystemResetedUp(int val)
 * @param time_to_wait time to wait before going in timeout
 * @return OK if success or an error code which specify the type of error encountered
 */
-int pollForEvent(int *event_to_search, int event_bytes, u8 * readData,
+int pollForEvent(int *event_to_search, int event_bytes, u8 *readData,
 		 int time_to_wait)
 {
 	int i, find, retry, count_err;
@@ -212,14 +216,14 @@ int pollForEvent(int *event_to_search, int event_bytes, u8 * readData,
 			err_handling = errorHandler(readData, FIFO_EVENT_SIZE);
 			if ((err_handling & 0xF0FF0000) ==
 			    ERROR_HANDLER_STOP_PROC) {
-				logError(1,
+				logError(0,
 					 "%s pollForEvent: forced to be stopped! ERROR %08X\n",
 					 tag, err_handling);
 				return err_handling;
 			}
 		} else {
 			if (readData[0] != EVT_ID_NOEVENT) {
-				logError(1, "%s %s\n", tag,
+				logError(0, "%s %s\n", tag,
 					 printHex("READ EVENT = ", readData,
 						  FIFO_EVENT_SIZE, temp));
 				memset(temp, 0, 128);
@@ -227,7 +231,7 @@ int pollForEvent(int *event_to_search, int event_bytes, u8 * readData,
 			}
 			if (readData[0] == EVT_ID_CONTROLLER_READY
 			    && event_to_search[0] != EVT_ID_CONTROLLER_READY) {
-				logError(1,
+				logError(0,
 					 "%s pollForEvent: Unmanned Controller Ready Event! Setting reset flags...\n",
 					 tag);
 				setSystemResetedUp(1);
@@ -277,7 +281,7 @@ int pollForEvent(int *event_to_search, int event_bytes, u8 * readData,
 * @param size size of cmd
 * @return OK if success or an error code which specify the type of error encountered
 */
-int checkEcho(u8 * cmd, int size)
+int checkEcho(u8 *cmd, int size)
 {
 	int ret, i;
 	int event_to_search[FIFO_EVENT_SIZE];
@@ -298,7 +302,7 @@ int checkEcho(u8 * cmd, int size)
 		}
 		ret =
 		    pollForEvent(event_to_search, size + 2, readData,
-				 TIEMOUT_ECHO);
+				 TIMEOUT_ECHO);
 		if (ret < OK) {
 			logError(1,
 				 "%s checkEcho: Echo Event not found! ERROR %08X\n",
@@ -308,7 +312,7 @@ int checkEcho(u8 * cmd, int size)
 			logError(1,
 				 "%s checkEcho: Echo Event found but with some error events before! num_error = %d \n",
 				 tag, ret);
-			return (ERROR_CHECK_ECHO_FAIL);
+			return ERROR_CHECK_ECHO_FAIL;
 		}
 
 		logError(0, "%s ECHO OK!\n", tag);
@@ -331,17 +335,17 @@ int setScanMode(u8 mode, u8 settings)
 	u8 cmd[3] = { FTS_CMD_SCAN_MODE, mode, settings };
 	int ret, size = 3;
 
-	logError(0, "%s %s: Setting scan mode: mode = %02X settings = %02X !\n",
-		 tag, __func__, mode, settings);
+	MI_TOUCH_LOGD(1, "%s %s: Setting scan mode: mode = %02X settings = %02X !\n",
+		tag, __func__, mode, settings);
 	if (mode == SCAN_MODE_LOW_POWER)
 		size = 2;
-	ret = fts_write(cmd, size);
+	ret = fts_write_dma_safe(cmd, size);
 	if (ret < OK) {
-		logError(1, "%s %s: write failed...ERROR %08X !\n", tag,
-			 __func__, ret);
+		MI_TOUCH_LOGE(1, "%s %s: write failed...ERROR %08X !\n", tag,
+			__func__, ret);
 		return ret | ERROR_SET_SCAN_MODE_FAIL;
 	}
-	logError(0, "%s %s: Setting scan mode OK!\n", tag, __func__);
+	MI_TOUCH_LOGD(0, "%s %s: Setting scan mode OK!\n", tag, __func__);
 	return OK;
 }
 
@@ -357,13 +361,20 @@ int setScanMode(u8 mode, u8 settings)
 * @param size in bytes of settings
 * @return OK if success or an error code which specify the type of error encountered
 */
-int setFeatures(u8 feat, u8 * settings, int size)
+int setFeatures(u8 feat, u8 *settings, int size)
 {
-	u8 cmd[2 + size];
+	u8 *cmd;
 	int i = 0;
 	int ret;
+
 	logError(0, "%s %s: Setting feature: feat = %02X !\n", tag, __func__,
 		 feat);
+
+	cmd = kzalloc(2 + size, GFP_KERNEL);
+	if (cmd == NULL) {
+		logError(1, "%s %s no memory\n", tag, __func__);
+		return -ENOMEM;
+	}
 	cmd[0] = FTS_CMD_FEATURE;
 	cmd[1] = feat;
 	logError(0, "%s %s: Settings = ", tag, __func__);
@@ -372,13 +383,15 @@ int setFeatures(u8 feat, u8 * settings, int size)
 		logError(0, "%02X ", settings[i]);
 	}
 	logError(0, "\n");
-	ret = fts_write(cmd, 2 + size);
+	ret = fts_write_dma_safe(cmd, 2 + size);
 	if (ret < OK) {
 		logError(1, "%s %s: write failed...ERROR %08X !\n", tag,
 			 __func__, ret);
 		return ret | ERROR_SET_FEATURE_FAIL;
 	}
 	logError(0, "%s %s: Setting feature OK!\n", tag, __func__);
+	kfree(cmd);
+	cmd = NULL;
 	return OK;
 }
 
@@ -394,10 +407,16 @@ int setFeatures(u8 feat, u8 * settings, int size)
 * @param size in bytes of settings
 * @return OK if success or an error code which specify the type of error encountered
 */
-int writeSysCmd(u8 sys_cmd, u8 * sett, int size)
+int writeSysCmd(u8 sys_cmd, u8 *sett, int size)
 {
-	u8 cmd[2 + size];
+	u8 *cmd = NULL;
 	int ret;
+
+	cmd = (u8 *)kzalloc(sizeof(u8) * size + 2, GFP_KERNEL);
+	if (!cmd) {
+		ret = -ENOMEM;
+		goto end;
+	}
 
 	cmd[0] = FTS_CMD_SYSTEM;
 	cmd[1] = sys_cmd;
@@ -417,6 +436,8 @@ int writeSysCmd(u8 sys_cmd, u8 * sett, int size)
 		} else {
 			logError(1, "%s %s: No setting argument! ERROR %08X\n",
 				 tag, __func__, ERROR_OP_NOT_ALLOW);
+			if (cmd)
+				kfree(cmd);
 			return ERROR_OP_NOT_ALLOW;
 		}
 	}
@@ -425,8 +446,10 @@ int writeSysCmd(u8 sys_cmd, u8 * sett, int size)
 	} else
 		logError(0, "%s %s: FINISHED! \n", tag, __func__);
 
+end:
+	if (cmd)
+		kfree(cmd);
 	return ret;
-
 }
 
 /** @}*/
@@ -565,13 +588,13 @@ int readSysInfo(int request)
 		 systemInfo.u8_cfgAfeVer, systemInfo.u8_cxAfeVer,
 		 systemInfo.u8_panelCfgAfeVer);
 	systemInfo.u8_protocol = data[index++];
-	logError(1, "%s Protocol = %02X \n", tag, systemInfo.u8_protocol);
+	logError(0, "%s Protocol = %02X \n", tag, systemInfo.u8_protocol);
 
 	for (i = 0; i < DIE_INFO_SIZE; i++) {
 		systemInfo.u8_dieInfo[i] = data[index++];
 
 	}
-	logError(1, "%s %s \n", tag,
+	logError(0, "%s %s \n", tag,
 		 printHex("Die Info =  ", systemInfo.u8_dieInfo, DIE_INFO_SIZE,
 			  temp));
 	memset(temp, 0, 256);
@@ -597,16 +620,16 @@ int readSysInfo(int request)
 	index += 2;
 	u8ToU16(&data[index], &systemInfo.u16_scrResY);
 	index += 2;
-	logError(1, "%s Screen Resolution = %d x %d \n", tag,
+	logError(0, "%s Screen Resolution = %d x %d \n", tag,
 		 systemInfo.u16_scrResX, systemInfo.u16_scrResY);
 	systemInfo.u8_scrTxLen = data[index++];
-	logError(1, "%s TX Len = %d \n", tag, systemInfo.u8_scrTxLen);
+	logError(0, "%s TX Len = %d \n", tag, systemInfo.u8_scrTxLen);
 	systemInfo.u8_scrRxLen = data[index++];
-	logError(1, "%s RX Len = %d \n", tag, systemInfo.u8_scrRxLen);
+	logError(0, "%s RX Len = %d \n", tag, systemInfo.u8_scrRxLen);
 	systemInfo.u8_keyLen = data[index++];
-	logError(1, "%s Key Len = %d \n", tag, systemInfo.u8_keyLen);
+	logError(0, "%s Key Len = %d \n", tag, systemInfo.u8_keyLen);
 	systemInfo.u8_forceLen = data[index++];
-	logError(1, "%s Force Len = %d \n", tag, systemInfo.u8_forceLen);
+	logError(0, "%s Force Len = %d \n", tag, systemInfo.u8_forceLen);
 
 	index += 40;
 
@@ -696,7 +719,7 @@ int readSysInfo(int request)
 	u8ToU16(&data[index], &systemInfo.u16_ssPrxRxBaselineAddr);
 	index += 2;
 
-	logError(1, "%s Parsed %d bytes! \n", tag, index);
+	logError(0, "%s Parsed %d bytes! \n", tag, index);
 
 	if (index != SYS_INFO_SIZE) {
 		logError(1, "%s %s: index = %d different from %d ERROR %08X\n",
@@ -705,7 +728,7 @@ int readSysInfo(int request)
 		return ERROR_OP_NOT_ALLOW;
 	}
 
-	logError(1, "%s System Info Read DONE!\n", tag);
+	logError(0, "%s System Info Read DONE!\n", tag);
 	return OK;
 
 FAIL:
@@ -723,7 +746,7 @@ FAIL:
  * @param len number of bytes to read
  * @return OK if success or an error code which specify the type of error encountered
  */
-int readConfig(u16 offset, u8 * outBuf, int len)
+int readConfig(u16 offset, u8 *outBuf, int len)
 {
 	int ret;
 	u64 final_address = offset + ADDR_CONFIG_OFFSET;
@@ -748,20 +771,20 @@ int readConfig(u16 offset, u8 * outBuf, int len)
  * Disable the interrupt so the ISR of the driver can not be called
  * @return OK if success or an error code which specify the type of error encountered
  */
-int fts_disableInterrupt()
+int fts_disableInterrupt(void)
 {
 	if (getClient() != NULL) {
-		logError(0, "%s Number of disable = %d \n", tag,
-			 disable_irq_count);
+		MI_TOUCH_LOGD(0, "%s %s: Number of disable = %d \n",
+			tag, __func__, disable_irq_count);
 		if (disable_irq_count == 0) {
-			logError(0, "%s Excecuting Disable... \n", tag);
+			MI_TOUCH_LOGD(0, "%s %s: Excecuting Disable... \n", tag, __func__);
 			disable_irq(getClient()->irq);
 			disable_irq_count++;
+			MI_TOUCH_LOGI(1, "%s %s: Interrupt Disabled!\n", tag, __func__);
 		}
-		logError(0, "%s Interrupt Disabled!\n", tag);
 		return OK;
 	} else {
-		logError(1, "%s %s: Impossible get client irq... ERROR %08X\n",
+		MI_TOUCH_LOGE(1, "%s %s: Impossible get client irq... ERROR %08X\n",
 			 tag, __func__, ERROR_OP_NOT_ALLOW);
 		return ERROR_OP_NOT_ALLOW;
 	}
@@ -772,7 +795,7 @@ int fts_disableInterrupt()
  * Disable the interrupt async so the ISR of the driver can not be called
  * @return OK if success or an error code which specify the type of error encountered
  */
-int fts_disableInterruptNoSync()
+int fts_disableInterruptNoSync(void)
 {
 	if (getClient() != NULL) {
 		spin_lock_irq(&fts_int);
@@ -798,7 +821,7 @@ int fts_disableInterruptNoSync()
  * Reset the disable_irq count
  * @return OK
  */
-int fts_resetDisableIrqCount()
+int fts_resetDisableIrqCount(void)
 {
 	disable_irq_count = 0;
 	return OK;
@@ -808,21 +831,20 @@ int fts_resetDisableIrqCount()
  * Enable the interrupt so the ISR of the driver can be called
  * @return OK if success or an error code which specify the type of error encountered
  */
-int fts_enableInterrupt()
+int fts_enableInterrupt(void)
 {
 	if (getClient() != NULL) {
-
-		logError(0, "%s Number of re-enable = %d \n", tag,
-			 disable_irq_count);
+		MI_TOUCH_LOGN(0, "%s %s: Number of re-enable = %d \n",
+			tag, __func__, disable_irq_count);
 		while (disable_irq_count > 0) {
-			logError(0, "%s Excecuting Enable... \n", tag);
+			MI_TOUCH_LOGN(1, "%s %s: Excecuting Enable... \n", tag, __func__);
 			enable_irq(getClient()->irq);
 			disable_irq_count--;
+			MI_TOUCH_LOGI(1, "%s %s: Interrupt Enabled!\n", tag, __func__);
 		}
-		logError(0, "%s Interrupt Enabled!\n", tag);
 		return OK;
 	} else {
-		logError(1, "%s %s: Impossible get client irq... ERROR %08X\n",
+		MI_TOUCH_LOGE(1, "%s %s: Impossible get client irq... ERROR %08X\n",
 			 tag, __func__, ERROR_OP_NOT_ALLOW);
 		return ERROR_OP_NOT_ALLOW;
 	}
@@ -832,13 +854,12 @@ int fts_enableInterrupt()
 *	Check if there is a crc error in the IC which prevent the fw to run.
 *	@return  OK if no CRC error, or a number >OK according the CRC error found
 */
-int fts_crc_check()
+int fts_crc_check(void)
 {
 	u8 val;
 	u8 crc_status;
 	int res;
-	u8 error_to_search[6] =
-	    { EVT_TYPE_ERROR_CRC_CFG_HEAD, EVT_TYPE_ERROR_CRC_CFG,
+	u8 error_to_search[6] = { EVT_TYPE_ERROR_CRC_CFG_HEAD, EVT_TYPE_ERROR_CRC_CFG,
 		EVT_TYPE_ERROR_CRC_CX, EVT_TYPE_ERROR_CRC_CX_HEAD,
 		EVT_TYPE_ERROR_CRC_CX_SUB,
 		EVT_TYPE_ERROR_CRC_CX_SUB_HEAD
@@ -848,46 +869,46 @@ int fts_crc_check()
 	    fts_writeReadU8UX(FTS_CMD_HW_REG_R, ADDR_SIZE_HW_REG, ADDR_CRC,
 			      &val, 1, DUMMY_HW_REG);
 	if (res < OK) {
-		logError(1, "%s %s Cannot read crc status ERROR %08X\n", tag,
+		MI_TOUCH_LOGE(1, "%s %s: Cannot read crc status ERROR %08X\n", tag,
 			 __func__, res);
 		return res;
 	}
 
 	crc_status = val & CRC_MASK;
 	if (crc_status != OK) {
-		logError(1, "%s %s CRC ERROR = %02X \n", tag, __func__,
+		MI_TOUCH_LOGE(1, "%s %s: CRC ERROR = %02X \n", tag, __func__,
 			 crc_status);
 		return CRC_CODE;
 	}
 
-	logError(1, "%s %s: Verifying if Config CRC Error...\n", tag, __func__);
+	MI_TOUCH_LOGI(1, "%s %s: Verifying if Config CRC Error...\n", tag, __func__);
 	res = fts_system_reset();
 	if (res >= OK) {
 		res = pollForErrorType(error_to_search, 2);
 		if (res < OK) {
-			logError(1, "%s %s: No Config CRC Error Found! \n", tag,
+			MI_TOUCH_LOGI(1, "%s %s: No Config CRC Error Found! \n", tag,
 				 __func__);
-			logError(1, "%s %s: Verifying if Cx CRC Error...\n",
+			MI_TOUCH_LOGI(1, "%s %s: Verifying if Cx CRC Error...\n",
 				 tag, __func__);
 			res = pollForErrorType(&error_to_search[2], 4);
 			if (res < OK) {
-				logError(1, "%s %s: No Cx CRC Error Found! \n",
+				MI_TOUCH_LOGI(1, "%s %s: No Cx CRC Error Found! \n",
 					 tag, __func__);
 				return OK;
 			} else {
-				logError(1,
+				MI_TOUCH_LOGE(1,
 					 "%s %s: Cx CRC Error found! CRC ERROR = %02X\n",
 					 tag, __func__, res);
 				return CRC_CX;
 			}
 		} else {
-			logError(1,
+			MI_TOUCH_LOGE(1,
 				 "%s %s: Config CRC Error found! CRC ERROR = %02X\n",
 				 tag, __func__, res);
 			return CRC_CONFIG;
 		}
 	} else {
-		logError(1,
+		MI_TOUCH_LOGE(1,
 			 "%s %s: Error while executing system reset! ERROR %08X\n",
 			 tag, __func__, res);
 		return res;
@@ -941,7 +962,7 @@ int requestSyncFrame(u8 type)
 
 		logError(0, "%s %s: Requesting frame %02X  attempt = %d \n",
 			 tag, __func__, type, retry2 + 1);
-		ret = fts_write(request, ARRAY_SIZE(request));
+		ret = fts_write_dma_safe(request, ARRAY_SIZE(request));
 		if (ret >= OK) {
 
 			logError(0, "%s %s: Polling for new count... \n", tag,
@@ -986,7 +1007,7 @@ int requestSyncFrame(u8 type)
 	return ret;
 }
 
-int calculateCRC8(u8 * u8_srcBuff, int size, u8 * crc)
+int calculateCRC8(u8 *u8_srcBuff, int size, u8 *crc)
 {
 	u8 u8_remainder;
 	u8 bit;
@@ -1017,18 +1038,16 @@ int calculateCRC8(u8 * u8_srcBuff, int size, u8 * crc)
 	}
 }
 
-int writeLockDownInfo(u8 * data, int size, u8 lock_id)
+int writeLockDownInfo(u8 *data, int size, u8 lock_id)
 {
 	int ret, i;
 	u8 crc_data = 0;
 	u8 crc_head = 0;
-	u8 cmd_lockdown_prepare[8] =
-	    { LOCKDOWN_SIGNATURE, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+	u8 cmd_lockdown_prepare[8] = { LOCKDOWN_SIGNATURE, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
 	u8 cmd_lockdown_crc[4] = { 0x00 };
 	u8 lockdown_save[3] = { 0xA4, 0x00, 0x04 };
 	u8 *temp = NULL;
-	u8 error_to_search[4] =
-	    { EVT_TYPE_ERROR_LOCKDOWN_FLASH, EVT_TYPE_ERROR_LOCKDOWN_CRC,
+	u8 error_to_search[4] = { EVT_TYPE_ERROR_LOCKDOWN_FLASH, EVT_TYPE_ERROR_LOCKDOWN_CRC,
 		EVT_TYPE_ERROR_LOCKDOWN_NO_DATA,
 		EVT_TYPE_ERROR_LOCKDOWN_WRITE_FULL
 	};
@@ -1116,12 +1135,12 @@ int writeLockDownInfo(u8 * data, int size, u8 lock_id)
 			continue;
 		}
 		mdelay(10);
-		ret = fts_write(lockdown_save, 3);
+		ret = fts_write_dma_safe(lockdown_save, 3);
 		mdelay(5);
 		ret = checkEcho(lockdown_save, 3);
 		if (ret < OK) {
-			logError(1, "%s No Echo received.. ERROR %08X !\n", tag,
-				 ret);
+			logError(1, "%s %s: No Echo received.. ERROR %08X !\n",
+				tag, __func__, ret);
 			continue;
 		} else {
 			logError(1, "%s Echo FOUND... OK!\n", tag, ret);
@@ -1150,7 +1169,7 @@ int writeLockDownInfo(u8 * data, int size, u8 lock_id)
 	return ret;
 }
 
-int readLockDownInfo(u8 * lockData, u8 lock_id, int size)
+int readLockDownInfo(u8 *lockData, u8 lock_id, int size)
 {
 	int ret = 0, i;
 	int loaded_cnt = 0;
@@ -1188,7 +1207,7 @@ int readLockDownInfo(u8 * lockData, u8 lock_id, int size)
 		}
 		loaded_cnt = (int)((temp[3] & 0xFF) << 8) + (temp[2] & 0xFF);
 		cmd_lockdown[2] = lock_id;
-		fts_write(cmd_lockdown, 3);
+		fts_write_dma_safe(cmd_lockdown, 3);
 		mdelay(10);
 		ret = checkEcho(cmd_lockdown, 3);
 		if (ret < OK) {
@@ -1245,7 +1264,7 @@ END:
 	return ret;
 }
 
-int fts_get_lockdown_info(u8 * lockData)
+int fts_get_lockdown_info(u8 *lockData, struct fts_ts_info *info)
 {
 	int ret = 0, i;
 	int loaded_cnt = 0;
@@ -1256,15 +1275,22 @@ int fts_get_lockdown_info(u8 * lockData)
 	u8 cmd_lockdown[3] = { 0xA4, 0x06, 0x00 };
 	char *datatemp = NULL;
 
-	logError(0, "%s %s:enter", tag, __func__);
+	if (info == NULL)
+		return ERROR_LOCKDOWN_CODE;
+	MI_TOUCH_LOGI(1, "%s %s:enter", tag, __func__);
+	if (info->lockdown_is_ok) {
+		MI_TOUCH_LOGI(1, "%s %s: aleady get,skip\n", tag, __func__);
+		return OK;
+	}
+
 	if (lock_id < 0x70 || lock_id > 0x77) {
-		logError(1, "%s the lock id type is not support\n", tag);
+		MI_TOUCH_LOGE(1, "%s %s: the lock id type is not support\n", tag, __func__);
 		return ERROR_LOCKDOWN_CODE;
 	}
 
 	temp = (u8 *) kmalloc(1024 * sizeof(u8), GFP_KERNEL);
 	if (temp == NULL) {
-		logError(1, "FTS temp alloc  memory failed \n");
+		MI_TOUCH_LOGE(1, "%s %s: alloc  memory failed\n", tag, __func__);
 		return -ENOMEM;
 	}
 	memset(temp, 0, 1024 * sizeof(u8));
@@ -1278,22 +1304,22 @@ int fts_get_lockdown_info(u8 * lockData)
 				      ADDR_LOCKDOWN, temp, LOCKDOWN_HEAD_LENGTH,
 				      DUMMY_CONFIG);
 		if (ret < OK) {
-			logError(1,
+			MI_TOUCH_LOGE(1,
 				 "%s %s: error while reading data ERROR %08X \n",
 				 tag, __func__, ret);
 			goto END;
 		}
 		loaded_cnt = (int)((temp[3] & 0xFF) << 8) + (temp[2] & 0xFF);
 		cmd_lockdown[2] = lock_id;
-		fts_write(cmd_lockdown, 3);
+		fts_write_dma_safe(cmd_lockdown, 3);
 		mdelay(10);
 		ret = checkEcho(cmd_lockdown, 3);
 		if (ret < OK) {
-			logError(1, "%s No Echo received.. ERROR %08X !\n", tag,
-				 ret);
+			MI_TOUCH_LOGE(1, "%s %s: No Echo received.. ERROR %08X !\n", tag,
+				__func__, ret);
 			continue;
 		} else {
-			logError(1, "%s Echo FOUND... OK!\n", tag, ret);
+			MI_TOUCH_LOGI(1, "%s %s: Echo FOUND... OK!\n", tag, __func__, ret);
 		}
 		ret =
 		    fts_writeReadU8UX(LOCKDOWN_WRITEREAD_CMD, BITS_16,
@@ -1301,7 +1327,7 @@ int fts_get_lockdown_info(u8 * lockData)
 				      size + LOCKDOWN_DATA_OFFSET,
 				      DUMMY_CONFIG);
 		if (ret < OK) {
-			logError(1,
+			MI_TOUCH_LOGE(1,
 				 "%s %s: error while reading data ERROR %08X \n",
 				 tag, __func__, ret);
 			goto END;
@@ -1311,15 +1337,15 @@ int fts_get_lockdown_info(u8 * lockData)
 		    (int)((temp[3] & 0xFF) << 8) + (temp[2] & 0xFF);
 		if (temp[4] == EVT_TYPE_ERROR_LOCKDOWN_FLASH
 		    || temp[4] == EVT_TYPE_ERROR_LOCKDOWN_NO_DATA) {
-			logError(1,
+			MI_TOUCH_LOGE(1,
 				 "%s %s: can not read the lockdown code ERROR type:%02X\n",
 				 tag, __func__, temp[4]);
 			ret = ERROR_LOCKDOWN_CODE;
 			goto END;
 		}
 
-		logError(1,
-			 "%s %s signature:%02X id:%02X %02X beforecnt:%d,aftercnt:%d\n",
+		MI_TOUCH_LOGE(1,
+			 "%s %s: signature:%02X id:%02X %02X beforecnt:%d,aftercnt:%d\n",
 			 tag, __func__, temp[0], temp[1], lock_id, loaded_cnt,
 			 loaded_cnt_after);
 		if (loaded_cnt_after == loaded_cnt + 1) {
@@ -1332,7 +1358,7 @@ int fts_get_lockdown_info(u8 * lockData)
 
 	datatemp = printHex_data("Lockdown Code = ", lockData, size);
 	if (datatemp != NULL) {
-		logError(1, "%s %s", tag, datatemp);
+		MI_TOUCH_LOGE(1, "%s %s: %s", tag, __func__, datatemp);
 		kfree(datatemp);
 	}
 

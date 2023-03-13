@@ -73,7 +73,7 @@ int isI2cError(int error)
  * @param size dimension in bytes of outBuf, if > ERROR_DUMP_ROW_SIZE*ERROR_DUMP_COL_SIZE, only the first ERROR_DUMP_ROW_SIZE*ERROR_DUMP_COL_SIZE bytes will be copied
  * @return OK if success or an error code which specify the type of error encountered
  */
-int dumpErrorInfo(u8 * outBuf, int size)
+int dumpErrorInfo(u8 *outBuf, int size)
 {
 	int ret, i;
 	u8 data[ERROR_DUMP_ROW_SIZE * ERROR_DUMP_COL_SIZE] = { 0 };
@@ -134,7 +134,7 @@ int dumpErrorInfo(u8 * outBuf, int size)
 * @param size size of event
 * @return OK if the error event doesn't require any action or the recovery strategy doesn't have any impact in the possible procedure that trigger the error, otherwise return an error code which specify the kind of error encountered. If ERROR_HANDLER_STOP_PROC the calling function must stop!
 */
-int errorHandler(u8 * event, int size)
+int errorHandler(u8 *event, int size)
 {
 	int res = OK;
 	struct fts_ts_info *info = NULL;
@@ -144,7 +144,7 @@ int errorHandler(u8 * event, int size)
 
 	if (info != NULL && event != NULL && size > 1
 	    && event[0] == EVT_ID_ERROR) {
-		logError(1, "%s errorHandler: Starting handling...\n", tag);
+		logError(0, "%s errorHandler: Starting handling...\n", tag);
 		addErrorIntoList(event, size);
 		switch (event[1]) {
 		case EVT_TYPE_ERROR_ESD:
@@ -212,12 +212,12 @@ int errorHandler(u8 * event, int size)
 			break;
 
 		default:
-			logError(1, "%s errorHandler: No Action taken! \n",
+			logError(0, "%s errorHandler: No Action taken! \n",
 				 tag);
 			break;
 
 		}
-		logError(1, "%s errorHandler: handling Finished! res = %08X\n",
+		logError(0, "%s errorHandler: handling Finished! res = %08X\n",
 			 tag, res);
 		return res;
 	} else {
@@ -235,7 +235,7 @@ int errorHandler(u8 * event, int size)
 * @param size size of event
 * @return OK
 */
-int addErrorIntoList(u8 * event, int size)
+int addErrorIntoList(u8 *event, int size)
 {
 	int i = 0;
 
@@ -298,7 +298,7 @@ int pollErrorList(int *event_to_search, int event_bytes)
 	int i = 0, j = 0, find = 0;
 	int count = getErrorListCount();
 
-	logError(1, "%s Starting to poll ErrorList... \n", tag);
+	logError(0, "%s Starting to poll ErrorList... \n", tag);
 	while (find != 1 && i < count) {
 		find = 1;
 		for (j = 0; j < event_bytes; j++) {
@@ -316,7 +316,7 @@ int pollErrorList(int *event_to_search, int event_bytes)
 		logError(1, "%s Error Found into ErrorList! \n", tag);
 		return i - 1;
 	} else {
-		logError(1, "%s Error Not Found into ErrorList! ERROR %08X \n",
+		logError(0, "%s Error Not Found into ErrorList! ERROR %08X \n",
 			 tag, ERROR_TIMEOUT);
 		return ERROR_TIMEOUT;
 	}
@@ -328,12 +328,12 @@ int pollErrorList(int *event_to_search, int event_bytes)
 * @param size size of list
 * @return error type found if success or ERROR_TIMEOUT
 */
-int pollForErrorType(u8 * list, int size)
+int pollForErrorType(u8 *list, int size)
 {
 	int i = 0, j = 0, find = 0;
 	int count = getErrorListCount();
 
-	logError(1, "%s %s: Starting to poll ErrorList... count = %d \n", tag,
+	MI_TOUCH_LOGD(1, "%s %s: Starting to poll ErrorList... count = %d \n", tag,
 		 __func__, count);
 	while (find != 1 && i < count) {
 		for (j = 0; j < size; j++) {
@@ -345,11 +345,11 @@ int pollForErrorType(u8 * list, int size)
 		i++;
 	}
 	if (find == 1) {
-		logError(1, "%s %s: Error Type %02X into ErrorList! \n", tag,
+		MI_TOUCH_LOGE(1, "%s %s: Error Type %02X into ErrorList! \n", tag,
 			 __func__, list[j]);
 		return list[j];
 	} else {
-		logError(1,
+		MI_TOUCH_LOGE(0,
 			 "%s %s: Error Type Not Found into ErrorList! ERROR %08X \n",
 			 tag, __func__, ERROR_TIMEOUT);
 		return ERROR_TIMEOUT;

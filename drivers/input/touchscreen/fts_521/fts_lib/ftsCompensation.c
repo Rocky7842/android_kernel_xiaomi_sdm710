@@ -77,7 +77,7 @@ int requestCompensationData(u8 type)
 * @param address pointer to a variable which will contain the updated address to the next data
 * @return OK if success or an error code which specify the type of error encountered
 */
-int readCompensationDataHeader(u8 type, DataHeader * header, u64 * address)
+int readCompensationDataHeader(u8 type, DataHeader *header, u64 *address)
 {
 
 	u64 offset = ADDR_FRAMEBUFFER;
@@ -126,7 +126,7 @@ int readCompensationDataHeader(u8 type, DataHeader * header, u64 * address)
 * @param global pointer to MutualSenseData variable which will contain the MS initialization data
 * @return OK if success or an error code which specify the type of error encountered
 */
-int readMutualSenseGlobalData(u64 * address, MutualSenseData * global)
+int readMutualSenseGlobalData(u64 *address, MutualSenseData *global)
 {
 
 	u8 data[COMP_DATA_GLOBAL];
@@ -163,7 +163,7 @@ int readMutualSenseGlobalData(u64 * address, MutualSenseData * global)
 * @param node pointer to MutualSenseData variable which will contain the MS initialization data
 * @return OK if success or an error code which specify the type of error encountered
 */
-int readMutualSenseNodeData(u64 address, MutualSenseData * node)
+int readMutualSenseNodeData(u64 address, MutualSenseData *node)
 {
 
 	int ret;
@@ -188,6 +188,7 @@ int readMutualSenseNodeData(u64 address, MutualSenseData * node)
 			 "%s %s: error while reading node data ERROR %08X \n",
 			 tag, __func__, ret);
 		kfree(node->node_data);
+		node->node_data = NULL;
 		return ret;
 	}
 	node->node_data_size = size;
@@ -204,7 +205,7 @@ int readMutualSenseNodeData(u64 address, MutualSenseData * node)
 * @param data pointer to MutualSenseData variable which will contain the MS initialization data
 * @return OK if success or an error code which specify the type of error encountered
 */
-int readMutualSenseCompensationData(u8 type, MutualSenseData * data)
+int readMutualSenseCompensationData(u8 type, MutualSenseData *data)
 {
 
 	int ret;
@@ -258,7 +259,7 @@ int readMutualSenseCompensationData(u8 type, MutualSenseData * data)
 * @param global pointer to MutualSenseData variable which will contain the SS initialization data
 * @return OK if success or an error code which specify the type of error encountered
 */
-int readSelfSenseGlobalData(u64 * address, SelfSenseData * global)
+int readSelfSenseGlobalData(u64 *address, SelfSenseData *global)
 {
 	int ret;
 	u8 data[COMP_DATA_GLOBAL];
@@ -304,11 +305,11 @@ int readSelfSenseGlobalData(u64 * address, SelfSenseData * global)
 * @param node pointer to SelfSenseData variable which will contain the SS initialization data
 * @return OK if success or an error code which specify the type of error encountered
 */
-int readSelfSenseNodeData(u64 address, SelfSenseData * node)
+int readSelfSenseNodeData(u64 address, SelfSenseData *node)
 {
 
 	int size = node->header.force_node * 2 + node->header.sense_node * 2;
-	u8 data[size];
+	u8 data[TXNODE_MAX * 2 + RXNODE_MAX * 2];
 	int ret;
 
 	node->ix2_fm =
@@ -390,7 +391,7 @@ int readSelfSenseNodeData(u64 address, SelfSenseData * node)
 * @param data pointer to SelfSenseData variable which will contain the SS initialization data
 * @return OK if success or an error code which specify the type of error encountered
 */
-int readSelfSenseCompensationData(u8 type, SelfSenseData * data)
+int readSelfSenseCompensationData(u8 type, SelfSenseData *data)
 {
 
 	int ret;
@@ -450,7 +451,7 @@ int readSelfSenseCompensationData(u8 type, SelfSenseData * data)
 * @param global pointer to a variable which will contain the TOT MS initialization data
 * @return OK if success or an error code which specify the type of error encountered
 */
-int readTotMutualSenseGlobalData(u64 * address, TotMutualSenseData * global)
+int readTotMutualSenseGlobalData(u64 *address, TotMutualSenseData *global)
 {
 	int ret;
 	u8 data[COMP_DATA_GLOBAL];
@@ -484,20 +485,26 @@ int readTotMutualSenseGlobalData(u64 * address, TotMutualSenseData * global)
 * @param node pointer to MutualSenseData variable which will contain the TOT MS initialization data
 * @return OK if success or an error code which specify the type of error encountered
 */
-int readTotMutualSenseNodeData(u64 address, TotMutualSenseData * node)
+int readTotMutualSenseNodeData(u64 address, TotMutualSenseData *node)
 {
 	int ret, i;
 	int size = node->header.force_node * node->header.sense_node;
 	int toRead = size * sizeof(u16);
-	u8 data[toRead];
+	u8 *data;
 
 	logError(0, "%s Address for Node data = %04X \n", tag, address);
-
+	data = kzalloc(toRead * sizeof(u16), GFP_KERNEL);
+	if (data == NULL) {
+		logError(1, "%s %s no memory\n", tag, __func__);
+		return ERROR_ALLOC;
+	}
 	node->node_data = (short *)kmalloc(size * (sizeof(short)), GFP_KERNEL);
 
 	if (node->node_data == NULL) {
 		logError(1, "%s %s: can not allocate node_data... ERROR %08X",
 			 tag, __func__, ERROR_ALLOC);
+		kfree(data);
+		data = NULL;
 		return ERROR_ALLOC;
 	}
 
@@ -511,6 +518,9 @@ int readTotMutualSenseNodeData(u64 address, TotMutualSenseData * node)
 			 "%s %s: error while reading node data ERROR %08X \n",
 			 tag, __func__, ret);
 		kfree(node->node_data);
+		node->node_data = NULL;
+		kfree(data);
+		data = NULL;
 		return ret;
 	}
 	node->node_data_size = size;
@@ -521,6 +531,8 @@ int readTotMutualSenseNodeData(u64 address, TotMutualSenseData * node)
 	}
 
 	logError(0, "%s Read node data OK! \n", tag);
+	kfree(data);
+	data = NULL;
 
 	return size;
 
@@ -532,7 +544,7 @@ int readTotMutualSenseNodeData(u64 address, TotMutualSenseData * node)
 * @param data pointer to a variable which will contain the TOT MS initialization data
 * @return OK if success or an error code which specify the type of error encountered
 */
-int readTotMutualSenseCompensationData(u8 type, TotMutualSenseData * data)
+int readTotMutualSenseCompensationData(u8 type, TotMutualSenseData *data)
 {
 	int ret;
 	u64 address;
@@ -587,7 +599,7 @@ int readTotMutualSenseCompensationData(u8 type, TotMutualSenseData * data)
 * @param global pointer to a variable which will contain the TOT SS initialization data
 * @return OK if success or an error code which specify the type of error encountered
 */
-int readTotSelfSenseGlobalData(u64 * address, TotSelfSenseData * global)
+int readTotSelfSenseGlobalData(u64 *address, TotSelfSenseData *global)
 {
 	int ret;
 	u8 data[COMP_DATA_GLOBAL];
@@ -623,12 +635,12 @@ int readTotSelfSenseGlobalData(u64 * address, TotSelfSenseData * global)
 * @param node pointer to a variable which will contain the TOT SS initialization data
 * @return OK if success or an error code which specify the type of error encountered
 */
-int readTotSelfSenseNodeData(u64 address, TotSelfSenseData * node)
+int readTotSelfSenseNodeData(u64 address, TotSelfSenseData *node)
 {
 
 	int size = node->header.force_node * 2 + node->header.sense_node * 2;
 	int toRead = size * 2;
-	u8 data[toRead];
+	u8 data[(TXNODE_MAX * 2 + RXNODE_MAX * 2) * 2];
 	int ret, i, j = 0;
 
 	node->ix_fm =
@@ -730,7 +742,7 @@ int readTotSelfSenseNodeData(u64 address, TotSelfSenseData * node)
 * @param data pointer to a variable which will contain the TOT MS initialization data
 * @return OK if success or an error code which specify the type of error encountered
 */
-int readTotSelfSenseCompensationData(u8 type, TotSelfSenseData * data)
+int readTotSelfSenseCompensationData(u8 type, TotSelfSenseData *data)
 {
 
 	int ret;
@@ -745,7 +757,8 @@ int readTotSelfSenseCompensationData(u8 type, TotSelfSenseData * data)
 	    (type == LOAD_PANEL_CX_TOT_SS_TOUCH
 	     || type == LOAD_PANEL_CX_TOT_SS_TOUCH_IDLE
 	     || type == LOAD_PANEL_CX_TOT_SS_KEY
-	     || type == LOAD_PANEL_CX_TOT_SS_FORCE)) {
+	     || type == LOAD_PANEL_CX_TOT_SS_FORCE
+	     || type == STAPI_HOST_DATA_ID_PANEL_CX_SS_HVR)) {
 		logError(1,
 			 "%s %s: Choose a TOT SS type of compensation data ERROR %08X\n",
 			 tag, __func__, ERROR_OP_NOT_ALLOW);

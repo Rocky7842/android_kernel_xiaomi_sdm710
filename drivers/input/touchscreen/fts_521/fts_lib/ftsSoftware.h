@@ -24,11 +24,6 @@
 #include <linux/types.h>
 #include "ftsHardware.h"
 
-typedef uint8_t u8;										/*basic type that represent one byte (or 8 bits)*/
-typedef uint16_t u16;									/*basic type that represent 2 bytes (or 16 bits)*/
-typedef uint32_t u32;									/*basic type that represent 4 bytes (or 32 bits)*/
-typedef uint64_t u64;									/*basic type that represent 8 bytes (or 64 bits)*/
-
 typedef signed char i8;									/*basic type that represent one signed byte (or 8 bits)*/
 
 /**
@@ -77,6 +72,7 @@ typedef enum {
 #define FTS_CMD_SYSTEM						0xA4	/*OP code to write s system command*/
 
 #define FTS_CMD_LOCKDOWN_ID				0x70
+#define FTS_CMD_CUSTOM			0xC0
 /** @} */
 
 /** @} */
@@ -167,6 +163,8 @@ typedef enum {
 #define GEST_ID_LEFTBRACE					0x11	/*'<'*/
 #define GEST_ID_RIGHTBRACE					0x12	/*'>'*/
 #define GEST_ID_CARET						0x13	/*'^'*/
+#define GEST_ID_LONG_PRESS					0x18	/*'^'*/
+#define GEST_ID_SINGTAP						0x19	/*'^'*/
 /** @}*/
 
 /** @defgroup sys_opt	 System Command Option
@@ -246,6 +244,7 @@ typedef enum {
 #define LOAD_CX_SS_KEY						0x15	/*Load SS Init Data for Key*/
 #define LOAD_CX_MS_FORCE					0x16	/*Load MS Init Data for Force*/
 #define LOAD_CX_SS_FORCE					0x17	/*Load SS Init Data for Force*/
+#define LOAD_CX_SS_HOVER					0x18	/*Load SS Hover Init Data for* Force */
 #define LOAD_SYNC_FRAME_RAW					0x30	/*Load a Synchronized Raw Frame*/
 #define LOAD_SYNC_FRAME_FILTER				0x31	/*Load a Synchronized Filter Frame*/
 #define LOAD_SYNC_FRAME_STRENGTH			0x33	/*Load a Synchronized Strength Frame*/
@@ -258,6 +257,8 @@ typedef enum {
 #define LOAD_PANEL_CX_TOT_SS_KEY			0x55	/*Load TOT SS Init Data for Key*/
 #define LOAD_PANEL_CX_TOT_MS_FORCE			0x56	/*Load TOT MS Init Data for Force*/
 #define LOAD_PANEL_CX_TOT_SS_FORCE			0x57	/*Load TOT SS Init Data for Force*/
+#define STAPI_HOST_DATA_ID_PANEL_CX_SS_HVR 	0x58		/*Load HOVER TOT SS Init Data for Activity*/
+
 /** @}*/
 
 #define	SPECIAL_TUNING_LP_TIMER				0x01	/*Perform LP Timer calibration*/
@@ -279,7 +280,7 @@ typedef enum {
 #define EVT_ID_DEBUG						0xE3	/*Debug Info*/
 #define EVT_ID_ERROR						0xF3	/*Error Event*/
 
-#define NUM_EVT_ID							(((EVT_ID_ERROR&0xF0)>>4) + 1)	/*Max number of unique event IDs supported*/
+#define NUM_EVT_ID							(((EVT_ID_ERROR & 0xF0) >> 4) + 1)	/*Max number of unique event IDs supported*/
 /** @}*/
 
 /** @defgroup status_type	 Status Event Types
@@ -292,8 +293,7 @@ typedef enum {
 #define EVT_TYPE_STATUS_FORCE_CAL			0x05	/*Force Calibration has triggered*/
 #define EVT_TYPE_STATUS_WATER				0x06	/*Water Mode*/
 #define EVT_TYPE_STATUS_SS_RAW_SAT			0x07	/*Self Sense data saturated*/
-#define EVT_TYPE_STATUS_POCKET				0x09
-
+#define EVT_TYPE_STATUS_POCKET				0x0A
 /** @} */
 
 /** @defgroup user_type	 User Event Types
@@ -305,6 +305,7 @@ typedef enum {
 #define EVT_TYPE_USER_PROXIMITY				0x01	/*Proximity detection event report*/
 #define EVT_TYPE_USER_GESTURE				0x02	/*Gesture detection event report*/
 #define EVT_TYPE_USER_EARDET				0x03	/*ear detection event report*/
+#define EVT_TYPE_USER_OVAL					0x04	/*ear detection event report*/
 
 /** @}*/
 
@@ -375,5 +376,8 @@ typedef enum {
 #define FTS_KEY_5							0x20	/*Key 5 bit*/
 #define FTS_KEY_6							0x40	/*Key 6 bit*/
 #define FTS_KEY_7							0x80	/*Key 7 bit*/
+
+#define FOD_LONGPRESS_EVENT 0x01
+#define FOD_SINGLETAP_EVENT 0x02
 
 #endif

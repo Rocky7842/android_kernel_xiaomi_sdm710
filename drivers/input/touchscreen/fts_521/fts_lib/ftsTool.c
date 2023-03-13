@@ -49,14 +49,15 @@
 char *printHex(char *label, u8 *buff, int count, u8 *result)
 {
 	int i, offset;
+	char temp[4];
 
 	offset = strlen(label);
 
 	strlcpy(result, label, offset);
 
 	for (i = 0; i < count; i++) {
-		snprintf(&result[offset], 4, "%02X ", buff[i]);
-		offset += 3;
+		snprintf(temp, 4, "%02X ", buff[i]);
+		strlcat(result, temp, offset + count * 3);
 	}
 
 	return result;

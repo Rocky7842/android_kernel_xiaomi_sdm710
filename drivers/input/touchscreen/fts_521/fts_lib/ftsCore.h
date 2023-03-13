@@ -35,12 +35,12 @@
 /**
  * Type of CRC errors
  */
-typedef enum{
+typedef enum {
 	CRC_CODE = 1,																/*CRC in the code section*/
 	CRC_CONFIG = 2,															/*CRC in the config section*/
 	CRC_CX = 3,																/*CRC in the cx section*/
 	CRC_PANEL = 4																/*CRC in the panel section*/
-}CRC_Error;
+} CRC_Error;
 
 /*CHIP INFO*/
 /** @defgroup system_info	System Info
@@ -50,7 +50,7 @@ typedef enum{
 #define SYS_INFO_SIZE						208									/*Size in bytes of System Info data*/
 #define DIE_INFO_SIZE						16									/*num bytes of die info*/
 #define EXTERNAL_RELEASE_INFO_SIZE			8									/*num bytes of external release in config*/
-#define RELEASE_INFO_SIZE					EXTERNAL_RELEASE_INFO_SIZE+8		/*num bytes of release info in sys info (first bytes are external release)*/
+#define RELEASE_INFO_SIZE					(EXTERNAL_RELEASE_INFO_SIZE + 8)		/*num bytes of release info in sys info (first bytes are external release)*/
 /** @}*/
 
 /*RETRY MECHANISM*/
@@ -62,7 +62,7 @@ typedef enum{
 #define LOCKDOWN_HEAD_LENGTH				4
 #define LOCKDOWN_DATA_OFFSET				20
 #define LOCKDOWN_SIGNATURE					0x5A
-#define ADDR_LOCKDOWN						(u64)0x0000000000000000
+#define ADDR_LOCKDOWN						((u64)0x0000000000000000)
 #define LOCKDOWN_WRITEREAD_CMD				0xA6
 
 /** @addtogroup system_info
@@ -159,23 +159,22 @@ int isSystemResettedUp(void);
 int isSystemResettedDown(void);
 void setSystemResetedUp(int val);
 void setSystemResetedDown(int val);
-int pollForEvent(int *event_to_search, int event_bytes, u8 * readData,
-		 int time_to_wait);
-int checkEcho(u8 * cmd, int size);
+int pollForEvent(int *event_to_search, int event_bytes, u8 *readData, int time_to_wait);
+int checkEcho(u8 *cmd, int size);
 int setScanMode(u8 mode, u8 settings);
-int setFeatures(u8 feat, u8 * settings, int size);
+int setFeatures(u8 feat, u8 *settings, int size);
 int defaultSysInfo(int i2cError);
-int writeSysCmd(u8 sys_cmd, u8 * sett, int size);
+int writeSysCmd(u8 sys_cmd, u8 *sett, int size);
 int readSysInfo(int request);
-int readConfig(u16 offset, u8 * outBuf, int len);
+int readConfig(u16 offset, u8 *outBuf, int len);
 int fts_disableInterrupt(void);
 int fts_disableInterruptNoSync(void);
 int fts_resetDisableIrqCount(void);
 int fts_enableInterrupt(void);
 int fts_crc_check(void);
 int requestSyncFrame(u8 type);
-int fts_get_lockdown_info(u8 * lockData);
-int writeLockDownInfo(u8 * data, int size, u8 lock_id);
-int readLockDownInfo(u8 * lockData, u8 lock_id, int size);
+int fts_get_lockdown_info(u8 *lockData, struct fts_ts_info *info);
+int writeLockDownInfo(u8 *data, int size, u8 lock_id);
+int readLockDownInfo(u8 *lockData, u8 lock_id, int size);
 
 #endif /* FTS_CORE_H */

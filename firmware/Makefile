@@ -95,7 +95,7 @@ fw-shipped-$(CONFIG_SND_YMFPCI) += yamaha/ds1_ctrl.fw yamaha/ds1_dsp.fw \
 fw-shipped-$(CONFIG_SND_WAVEFRONT) += yamaha/yss225_registers.bin
 fw-shipped-$(CONFIG_TEHUTI) += tehuti/bdx.bin
 fw-shipped-$(CONFIG_TOUCHSCREEN_GOODIX_GTX8) += goodix_gt9886_cfg_f2.bin goodix_gt9886_fw_f2.bin
-fw-shipped-$(CONFIG_TOUCHSCREEN_ST_FTS_V521) += st_fts_v521.ftb
+fw-shipped-$(CONFIG_TOUCHSCREEN_ST_FTS_V521) += st_fts_j1.ftb st_fts_j2.ftb st_fts_j2_1.ftb st_fts_j2_2.ftb st_fts_j2_3.ftb st_fts_j1s.ftb st_fts_j2s.ftb st_fts_j2s_default.ftb
 fw-shipped-$(CONFIG_TIGON3) += tigon/tg3.bin tigon/tg3_tso.bin \
 			       tigon/tg3_tso5.bin
 fw-shipped-$(CONFIG_TYPHOON) += 3com/typhoon.bin

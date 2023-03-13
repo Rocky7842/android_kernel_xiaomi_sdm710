@@ -45,7 +45,7 @@ extern SysInfo systemInfo;
  * Read the channels lengths from the config memory
  * @return OK if success or an error code which specify the type of error encountered
  */
-int getChannelsLength()
+int getChannelsLength(void)
 {
 	int ret;
 	u8 data[2];
@@ -109,7 +109,7 @@ int getFrameData(u16 address, int size, short *frame)
  * Return the number of Sense Channels (Rx)
  * @return number of Rx channels
  */
-int getSenseLen()
+int getSenseLen(void)
 {
 	if (systemInfo.u8_scrRxLen == 0) {
 		getChannelsLength();
@@ -121,7 +121,7 @@ int getSenseLen()
  * Return the number of Force Channels (Tx)
  * @return number of Tx channels
  */
-int getForceLen()
+int getForceLen(void)
 {
 	if (systemInfo.u8_scrTxLen == 0) {
 		getChannelsLength();
@@ -137,7 +137,7 @@ int getForceLen()
 * @param frame pointer to MutualSenseFrame variable which will contain the data
 * @return OK if success or an error code which specify the type of error encountered
 */
-int getMSFrame3(MSFrameType type, MutualSenseFrame * frame)
+int getMSFrame3(MSFrameType type, MutualSenseFrame *frame)
 {
 	u16 offset;
 	int ret, force_len, sense_len;
@@ -257,7 +257,7 @@ LOAD_FRC:
 * @param frame pointer to SelfSenseFrame variable which will contain the data
 * @return OK if success or an error code which specify the type of error encountered
 */
-int getSSFrame3(SSFrameType type, SelfSenseFrame * frame)
+int getSSFrame3(SSFrameType type, SelfSenseFrame *frame)
 {
 	u16 offset_force, offset_sense;
 	int ret;

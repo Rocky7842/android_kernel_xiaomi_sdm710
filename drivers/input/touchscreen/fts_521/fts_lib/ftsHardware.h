@@ -58,7 +58,13 @@
 /*FLASH UNLOCK PARAMETER*/
 #define FLASH_UNLOCK_CODE0						0x25
 #define FLASH_UNLOCK_CODE1						0x20
+#define FLASH_UNLOCK_CODE2		0x6B
+#define FLASH_UNLOCK_CODE3		0x00
 
+#define FLASH_UVLO_ENABLE_CODE0		0x1B
+#define FLASH_UVLO_ENABLE_CODE1		0x66
+#define FLASH_AUTOPOWERDOWN_ENABLE_CODE0 0x68
+#define FLASH_AUTOPOWERDOWN_ENABLE_CODE1 0x13
 /*FLASH ERASE and DMA PARAMETER*/
 #define FLASH_ERASE_START						0x80
 #define FLASH_ERASE_CODE1                       0xC0
@@ -95,7 +101,7 @@
 #define FW_BYTES_ALLIGN							4					/*allignment of the info*/
 #define FW_BIN_VER_OFFSET						16					/*offset of the fw version in the .ftb file*/
 #define FW_BIN_CONFIG_ID_OFFSET					20					/*offset of the config id in the .ftb file*/
-#define FW_CX_VERSION							(16+4)				/*offset of CX version in the sec2 of FW file*/
+#define FW_CX_VERSION							(16 + 4)				/*offset of CX version in the sec2 of FW file*/
 
 /** @} */
 
@@ -146,38 +152,38 @@
  */
 
 /*IMPORTANT HW ADDRESSES (u64)*/
-#define ADDR_FRAMEBUFFER			(u64)0x0000000000000000			/*frame buffer address in memory*/
-#define ADDR_ERROR_DUMP				(u64)0x000000000000EF80			/*start address dump error log*/
+#define ADDR_FRAMEBUFFER			((u64)0x0000000000000000)			/*frame buffer address in memory*/
+#define ADDR_ERROR_DUMP				((u64)0x000000000000EF80)			/*start address dump error log*/
 
 /*SYSTEM RESET INFO*/
-#define ADDR_SYSTEM_RESET			(u64)0x0000000020000024			/*address of System control register in FTI*/
+#define ADDR_SYSTEM_RESET			((u64)0x0000000020000024)			/*address of System control register in FTI*/
 #define SYSTEM_RESET_VALUE						0x80				/*value to write in SYSTEM_RESET_ADDRESS to perform a system reset in FTM5*/
 
 /*REMAP REGISTER*/
-#define ADDR_BOOT_OPTION			(u64)0x0000000020000025			/*address of Boot option register in SONIA*/
+#define ADDR_BOOT_OPTION			((u64)0x0000000020000025)			/*address of Boot option register in SONIA*/
 
 /*INTERRUPT INFO*/
-#define ADDR_IER					(u64)0x0000000020000029			/*address of the Interrupt enable register in FTMI*/
+#define ADDR_IER					((u64)0x0000000020000029)			/*address of the Interrupt enable register in FTMI*/
 
 /*Chip ID/Fw Version*/
-#define ADDR_DCHIP_ID				(u64)0x0000000020000000			/*chip id address for FTI*/
-#define ADDR_DCHIP_FW_VER			(u64)0x0000000020000004			/*fw version address for FTI*/
+#define ADDR_DCHIP_ID				((u64)0x0000000020000000)			/*chip id address for FTI*/
+#define ADDR_DCHIP_FW_VER			((u64)0x0000000020000004)			/*fw version address for FTI*/
 
 /*INTERFACE REGISTER*/
-#define ADDR_ICR					(u64)0x000000002000002D			/*address of Device control register to set the comunication protocol (SPI/I2C)*/
+#define ADDR_ICR					((u64)0x000000002000002D)			/*address of Device control register to set the comunication protocol (SPI/I2C)*/
 #define SPI4_MASK					0x02							/*bit to set spi4*/
 
 /*CRC ADDR*/
-#define ADDR_CRC					(u64)0x0000000020000078			/*address of the CRC control register in FTI*/
+#define ADDR_CRC					((u64)0x0000000020000078)			/*address of the CRC control register in FTI*/
 #define CRC_MASK								0x03				/*bitmask which reveal if there is a CRC error in the flash*/
 
-#define ADDR_CONFIG_OFFSET			(u64)0x0000000000000000			/*config address in memory if FTI*/
+#define ADDR_CONFIG_OFFSET			((u64)0x0000000000000000)			/*config address in memory if FTI*/
 
-#define ADDR_GPIO_INPUT				(u64)0x0000000020000030			/*address of GPIO input register*/
-#define ADDR_GPIO_DIRECTION			(u64)0x0000000020000032			/*address of GPIO direction register*/
-#define ADDR_GPIO_PULLUP			(u64)0x0000000020000034			/*address of GPIO pullup register*/
-#define ADDR_GPIO_CONFIG_REG0		(u64)0x000000002000003D			/*address of GPIO config register*/
-#define ADDR_GPIO_CONFIG_REG2		(u64)0x000000002000003F			/*address of GPIO config register*/
+#define ADDR_GPIO_INPUT				((u64)0x0000000020000030)			/*address of GPIO input register*/
+#define ADDR_GPIO_DIRECTION			((u64)0x0000000020000032)			/*address of GPIO direction register*/
+#define ADDR_GPIO_PULLUP			((u64)0x0000000020000034)			/*address of GPIO pullup register*/
+#define ADDR_GPIO_CONFIG_REG0		((u64)0x000000002000003D)			/*address of GPIO config register*/
+#define ADDR_GPIO_CONFIG_REG2		((u64)0x000000002000003F)			/*address of GPIO config register*/
 
 
 /**@}*/
