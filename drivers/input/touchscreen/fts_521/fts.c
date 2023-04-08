@@ -1167,7 +1167,7 @@ static ssize_t double_tap_store(struct kobject *kobj,
 	return -EINVAL;
 
 	ms->info = fts_info;
-	ms->mode = (unsigned char)!!val;
+	ms->mode = ((unsigned char)!!val) + INPUT_EVENT_WAKUP_MODE_OFF;
 	INIT_WORK(&ms->switch_mode_work,
 			fts_switch_mode_work);
 	schedule_work(&ms->switch_mode_work);
