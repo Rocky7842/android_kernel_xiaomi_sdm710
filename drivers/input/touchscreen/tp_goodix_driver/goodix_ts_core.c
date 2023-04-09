@@ -821,7 +821,6 @@ static ssize_t double_tap_store(struct kobject *kobj,
 	goodix_core_data->double_wakeup = !!val;
 	goodix_core_data->gesture_enabled =
 		goodix_core_data->double_wakeup ||
-		goodix_core_data->fod_status ||
 		goodix_core_data->aod_status;
 
 	return count;
@@ -1473,7 +1472,6 @@ static ssize_t fod_status_store(struct kobject *kobj,
 	ts_info("buf:%s, count:%zu\n", buf, count);
 	sscanf(buf, "%u", &goodix_core_data->fod_status);
 
-	goodix_core_data->gesture_enabled = goodix_core_data->double_wakeup | goodix_core_data->fod_status;
 	goodix_check_gesture_stat(!!goodix_core_data->fod_status);
 
 	return count;
@@ -1496,8 +1494,9 @@ static void goodix_switch_mode_work(struct work_struct *work)
 	if (value >= INPUT_EVENT_WAKUP_MODE_OFF
 		&& value <= INPUT_EVENT_WAKUP_MODE_ON) {
 		info->double_wakeup = value - INPUT_EVENT_WAKUP_MODE_OFF;
-		info->gesture_enabled = info->double_wakeup ||
-			info->fod_status || info->aod_status;
+		info->gesture_enabled =
+			goodix_core_data->double_wakeup ||
+			goodix_core_data->aod_status;
 		/*goodix_gesture_enable(!!info->gesture_enabled);*/
 	}
 }
