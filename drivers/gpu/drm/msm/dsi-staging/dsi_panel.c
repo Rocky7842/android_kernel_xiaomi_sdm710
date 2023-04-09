@@ -4165,6 +4165,8 @@ error:
 
 int dsi_panel_enable_doze(struct dsi_panel *panel)
 {
+	panel->doze_status = true;
+
 	/* Select doze mode according HBM state */
 	if (panel->hbm_enabled)
 		/* HBM enabled -> use HBM doze mode */
@@ -4230,6 +4232,8 @@ int dsi_panel_set_lp2(struct dsi_panel *panel)
 
 int dsi_panel_set_nolp(struct dsi_panel *panel)
 {
+	panel->doze_status = false;
+
 	int rc = 0;
 
 	if (!panel) {
