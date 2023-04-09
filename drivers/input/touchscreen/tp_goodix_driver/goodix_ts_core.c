@@ -1494,11 +1494,12 @@ static void goodix_switch_mode_work(struct work_struct *work)
 	if (value >= INPUT_EVENT_WAKUP_MODE_OFF
 		&& value <= INPUT_EVENT_WAKUP_MODE_ON) {
 		info->double_wakeup = value - INPUT_EVENT_WAKUP_MODE_OFF;
-		info->gesture_enabled =
-			goodix_core_data->double_wakeup ||
-			goodix_core_data->aod_status;
-		/*goodix_gesture_enable(!!info->gesture_enabled);*/
 	}
+
+	info->gesture_enabled =
+		goodix_core_data->double_wakeup ||
+		goodix_core_data->aod_status;
+	/*goodix_gesture_enable(!!info->gesture_enabled);*/
 }
 
 static int goodix_input_event(struct input_dev *dev, unsigned int type,
