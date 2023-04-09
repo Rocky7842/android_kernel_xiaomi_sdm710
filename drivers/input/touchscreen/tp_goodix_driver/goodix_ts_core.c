@@ -819,9 +819,6 @@ static ssize_t double_tap_store(struct kobject *kobj,
 	return -EINVAL;
 
 	goodix_core_data->double_wakeup = !!val;
-	goodix_core_data->gesture_enabled =
-		goodix_core_data->double_wakeup ||
-		goodix_core_data->aod_status;
 
 	return count;
 }
@@ -2071,6 +2068,9 @@ int goodix_ts_fb_notifier_callback(struct notifier_block *self,
 			queue_work(core_data->event_wq, &core_data->resume_work);
 		}
 	}
+
+	core_data->gesture_enabled =
+		core_data->double_wakeup || core_data->aod_status;
 
 	return 0;
 }
