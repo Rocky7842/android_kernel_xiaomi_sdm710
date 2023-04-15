@@ -49,13 +49,6 @@ Properties:
 		0 to 3596. If this is not specified, then 1800 mV will be
 		used by default.
 
-- qcom,ilim-ma
-  Usage:      optional
-  Value type: <u32>
-  Definition: Specifies the maximum allowed output current in mA for the
-		actuator. Allowed values: 400 or 800. If this is not
-		specified, 400 mA will be used by default.
-
 - qcom,play-rate-us
   Usage:      optional
   Value type: <u32>
