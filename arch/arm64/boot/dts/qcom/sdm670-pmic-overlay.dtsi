@@ -246,7 +246,6 @@
 		interrupt-names = "hap-sc-irq", "hap-play-irq";
 		qcom,actuator-type = "lra";
 		qcom,vmax-mv = <3200>;
-		qcom,ilim-ma = <800>;
 		qcom,play-rate-us = <10000>;
 		qcom,lra-auto-resonance-mode = "qwd";
 		qcom,lra-resonance-sig-shape = "square";
