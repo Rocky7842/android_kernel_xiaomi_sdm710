@@ -4165,15 +4165,20 @@ error:
 
 int dsi_panel_enable_doze(struct dsi_panel *panel)
 {
+	int rc = 0;
 	panel->doze_status = true;
 
 	/* Select doze mode according HBM state */
-	if (panel->hbm_enabled)
+	if (panel->hbm_enabled){
 		/* HBM enabled -> use HBM doze mode */
-		return DSI_PANEL_SEND(panel, DOZE_HBM);
-
-	/* HBM disabled -> use normal doze mode */
-	return DSI_PANEL_SEND(panel, DOZE_LBM);
+		rc = DSI_PANEL_SEND(panel, DOZE_HBM);
+	} else {
+		/* HBM disabled -> use normal doze mode */
+		rc = DSI_PANEL_SEND(panel, DOZE_LBM);
+		u32 bl_lvl = dsi_panel_get_backlight(panel);
+		dsi_panel_update_backlight(panel, bl_lvl);
+	}
+	return rc;
 }
 
 int dsi_panel_set_lp1(struct dsi_panel *panel)
