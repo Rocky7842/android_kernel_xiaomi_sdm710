@@ -5156,7 +5156,7 @@ static void smblib_handle_typec_removal(struct smb_charger *chg)
 	vote(chg->usb_icl_votable, HVDCP2_ICL_VOTER, false, 0);
 	vote(chg->usb_icl_votable, CC_FLOAT_VOTER, false, 0);
 	vote(chg->usb_icl_votable, UNSTANDARD_QC2_VOTER, false, 0);
-	vote(chg->usb_icl_votable, USER_VOTER, false, 0);
+	//vote(chg->usb_icl_votable, USER_VOTER, false, 0);
 
 	/* reset hvdcp voters */
 	vote(chg->hvdcp_disable_votable_indirect, VBUS_CC_SHORT_VOTER, true, 0);
