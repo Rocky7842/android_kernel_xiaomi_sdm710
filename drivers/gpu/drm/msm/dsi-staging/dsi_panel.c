@@ -919,9 +919,13 @@ static int dsi_panel_set_hbm(struct dsi_panel *panel, bool enabled)
 static u32 dsi_panel_get_backlight(struct dsi_panel *panel)
 {
 	if (panel->doze_status) {
-		if (panel->hbm_enabled)
+		if (panel->hbm_enabled) {
+
+			/* Switch-off HBM to set doze brightness */
+			dsi_panel_set_hbm(panel, false);
+
 			return panel->bl_config.bl_doze_hbm;
-		else
+		} else
 			return panel->bl_config.bl_doze_lbm;
 	}
 
