@@ -1013,47 +1013,51 @@ int dsi_panel_set_backlight(struct dsi_panel *panel, u32 bl_lvl)
 	if (panel->type == EXT_BRIDGE)
 		return 0;
 
-	/* Modify HW backlight above threshold if:
-	 * - DC dimming is enabled by user
-	 * - requested backlight level is not zero
-	 * - panel is not in doze mode
+	/* Modify backlight value if requested backlight
+	 * level is not zero.
 	 */
-	if (panel->dc_dimming && bl_lvl && !panel->doze_status) {
-		u32 brightness, hw_bl_lvl;
+	if (bl_lvl) {
+		/* Use doze brightness nodes if the panel is in doze. */
+		if (panel->doze_status)
+			bl_lvl = dsi_panel_get_backlight(panel);
 
-		/* Get brightness for current dim layer alpha value
-		 * The range is [0, dc_threshold] so for case that
-		 * HW backlight value is dc_threshold.
+		/* Modify HW backlight above threshold if dc_dimming
+		 * was enabled.
 		 */
-		brightness = alpha_to_brightness(panel->dc_dim_lut,
-						 panel->dc_dim_lut_count,
-						 panel->dc_dim_alpha);
+		else if (panel->dc_dimming) {
 
-		/* Get current HW backlight level, if it is zero then
-		 * use DC threshold.
-		 */
-		hw_bl_lvl = panel->hw_bl_lvl ? : bl->bl_dc_thresh;
+			u32 brightness, hw_bl_lvl;
 
-		/* Transform computed brightness if current HW backlight
-		 * is different from DC threshold.
-		 */
-		if (hw_bl_lvl != bl->bl_dc_thresh)
-			brightness = DIV_ROUND_CLOSEST(brightness * hw_bl_lvl,
-						       bl->bl_dc_thresh);
+			/* Get brightness for current dim layer alpha value
+			 * The range is [0, dc_threshold] so for case that
+			 * HW backlight value is dc_threshold.
+			 */
+			brightness = alpha_to_brightness(panel->dc_dim_lut,
+							 panel->dc_dim_lut_count,
+							 panel->dc_dim_alpha);
 
-		/* Compute new HW backlight value that represents (together
-		 * with current dimming layer alpha value) requested
-		 * backlight level.
-		 */
-		bl_lvl = DIV_ROUND_CLOSEST(bl_lvl * hw_bl_lvl, brightness);
+			/* Get current HW backlight level, if it is zero then
+			 * use DC threshold.
+			 */
+			hw_bl_lvl = panel->hw_bl_lvl ? : bl->bl_dc_thresh;
 
-		/* Make sure backlight level is above threshold */
-		bl_lvl = max(bl->bl_dc_thresh, bl_lvl);
+			/* Transform computed brightness if current HW backlight
+			 * is different from DC threshold.
+			 */
+			if (hw_bl_lvl != bl->bl_dc_thresh)
+				brightness = DIV_ROUND_CLOSEST(brightness * hw_bl_lvl,
+							       bl->bl_dc_thresh);
+
+			/* Compute new HW backlight value that represents (together
+			 * with current dimming layer alpha value) requested
+			 * backlight level.
+			 */
+			bl_lvl = DIV_ROUND_CLOSEST(bl_lvl * hw_bl_lvl, brightness);
+
+			/* Make sure backlight level is above threshold */
+			bl_lvl = max(bl->bl_dc_thresh, bl_lvl);
+		}
 	}
-
-	/* Override with doze brightness nodes if the panel is in doze */
-	if (bl_lvl && panel->doze_status)
-		bl_lvl = dsi_panel_get_backlight(panel);
 
 	pr_debug("backlight type:%d lvl:%d\n", bl->type, bl_lvl);
 	switch (bl->type) {
