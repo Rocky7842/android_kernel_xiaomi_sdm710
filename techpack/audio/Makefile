@@ -11,6 +11,10 @@ ifeq ($(CONFIG_ARCH_SDXPOORWILLS), y)
 include $(srctree)/techpack/audio/config/sdxpoorwillsauto.conf
 export $(shell sed 's/=.*//' $(srctree)/techpack/audio/config/sdxpoorwillsauto.conf)
 endif
+ifeq ($(CONFIG_MACH_XIAOMI_GRUS), y)
+include $(srctree)/techpack/audio/config/grusauto.conf
+export $(shell sed 's/=.*//' $(srctree)/techpack/audio/config/grusauto.conf)
+endif
 
 # Use USERINCLUDE when you must reference the UAPI directories only.
 USERINCLUDE     += \
@@ -33,6 +37,10 @@ endif
 ifeq ($(CONFIG_ARCH_SDXPOORWILLS), y)
 LINUXINCLUDE    += \
                 -include $(srctree)/techpack/audio/config/sdxpoorwillsautoconf.h
+endif
+ifeq ($(CONFIG_MACH_XIAOMI_GRUS), y)
+LINUXINCLUDE    += \
+                -include $(srctree)/techpack/audio/config/grusautoconf.h
 endif
 
 obj-y += asoc/
