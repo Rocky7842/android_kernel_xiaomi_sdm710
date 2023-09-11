@@ -937,8 +937,15 @@ static int dsi_panel_adj_dc_backlight(struct dsi_panel *panel, bool status)
 	u32 bl_lvl = dsi_panel_get_backlight(panel);
 	int rc;
 
-	if (status && !panel->doze_status)
-		bl_lvl = max(bl_lvl, panel->bl_config.bl_dc_thresh);
+	/* Skip modifying bl_lvl once if waking up from
+	 * lp1/lp2, to prevent flickering.
+	 */
+	if (status && !panel->doze_status) {
+		if (!panel->skip_dc_bl_adj)
+			bl_lvl = max(bl_lvl, panel->bl_config.bl_dc_thresh);
+		else
+			panel->skip_dc_bl_adj = false;
+	}
 
 	rc = dsi_panel_update_backlight(panel, bl_lvl);
 	if (rc)
@@ -3719,6 +3726,7 @@ struct dsi_panel *dsi_panel_get(struct device *parent,
 	panel->panel_of_node = of_node;
 	panel->power_mode = SDE_MODE_DPMS_OFF;
 	panel->doze_status = false;
+	panel->skip_dc_bl_adj = false;
 
 	drm_panel_init(&panel->drm_panel);
 	mutex_init(&panel->panel_lock);
@@ -4252,6 +4260,7 @@ int dsi_panel_set_nolp(struct dsi_panel *panel)
 	mutex_unlock(&panel->panel_lock);
 
 	panel->doze_status = false;
+	panel->skip_dc_bl_adj = true;
 
 	return rc;
 }

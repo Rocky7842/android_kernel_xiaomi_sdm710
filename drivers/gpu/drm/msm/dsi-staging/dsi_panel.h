@@ -240,6 +240,7 @@ struct dsi_panel {
 	u32 dc_dim_alpha;
 	u32 hw_bl_lvl;
 	bool dc_dimming;
+	bool skip_dc_bl_adj;
 };
 
 static inline bool dsi_panel_ulps_feature_enabled(struct dsi_panel *panel)
