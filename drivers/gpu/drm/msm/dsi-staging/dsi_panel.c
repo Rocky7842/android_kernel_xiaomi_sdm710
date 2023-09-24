@@ -932,7 +932,20 @@ static u32 dsi_panel_get_backlight(struct dsi_panel *panel)
 	return panel->bl_config.bl_level;
 }
 
-int dsi_panel_set_backlight(struct dsi_panel *panel, u32 bl_lvl);
+static int dsi_panel_adj_dc_backlight(struct dsi_panel *panel, bool status)
+{
+	u32 bl_lvl = dsi_panel_get_backlight(panel);
+	int rc;
+
+	if (status)
+		bl_lvl = max(bl_lvl, panel->bl_config.bl_dc_thresh);
+
+	rc = dsi_panel_update_backlight(panel, bl_lvl);
+	if (rc)
+		pr_err("Failed to update backlight\n");
+
+	return rc;
+}
 
 enum msm_dim_layer_type dsi_panel_update_dimlayer(struct dsi_panel *panel,
 						  enum msm_dim_layer_type type,
@@ -995,10 +1008,8 @@ no_type_change:
 	}
 
 	/* Adjust DC backlight if necessary */
-	if (adjust_bl){
-		u32 bl_lvl = dsi_panel_get_backlight(panel);
-		dsi_panel_set_backlight(panel, bl_lvl);
-	}
+	if (adjust_bl)
+		dsi_panel_adj_dc_backlight(panel, panel->dc_dimming);
 
 	dsi_panel_release_panel_lock(panel);
 
@@ -1057,9 +1068,6 @@ int dsi_panel_set_backlight(struct dsi_panel *panel, u32 bl_lvl)
 			 * backlight level.
 			 */
 			bl_lvl = DIV_ROUND_CLOSEST(bl_lvl * hw_bl_lvl, brightness);
-
-			/* Make sure backlight level is above threshold */
-			bl_lvl = max(bl->bl_dc_thresh, bl_lvl);
 		}
 	}
 
