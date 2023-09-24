@@ -937,7 +937,7 @@ static int dsi_panel_adj_dc_backlight(struct dsi_panel *panel, bool status)
 	u32 bl_lvl = dsi_panel_get_backlight(panel);
 	int rc;
 
-	if (status)
+	if (status && !panel->doze_status)
 		bl_lvl = max(bl_lvl, panel->bl_config.bl_dc_thresh);
 
 	rc = dsi_panel_update_backlight(panel, bl_lvl);
