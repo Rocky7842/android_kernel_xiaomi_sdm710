@@ -970,21 +970,11 @@ enum msm_dim_layer_type dsi_panel_update_dimlayer(struct dsi_panel *panel,
 			dsi_panel_set_hbm(panel, true);
 	}
 	else if (panel->dimlayer_type == MSM_DIM_LAYER_FOD) {
-		if (!panel->doze_status) {
-			/* Switch to normal mode */
+		/* Switch to normal mode */
 
-			/* Switch-off HBM if it is not enabled by user */
-			if (!panel->hbm_enabled)
-				dsi_panel_set_hbm(panel, false);
-		} else {
-			/* Switch back to doze mode */
-			if (panel->hbm_enabled)
-				DSI_PANEL_SEND(panel,
-					       DISP_HBM_FOD_OFF_DOZE_HBM_ON);
-			else
-				DSI_PANEL_SEND(panel,
-					       DISP_HBM_FOD_OFF_DOZE_LBM_ON);
-		}
+		/* Switch-off HBM if it is not enabled by user */
+		if (!panel->hbm_enabled)
+			dsi_panel_set_hbm(panel, false);
 	}
 	else if (panel->dimlayer_type == MSM_DIM_LAYER_TOP ||
 		 type == MSM_DIM_LAYER_TOP) {
@@ -2023,8 +2013,6 @@ const char *cmd_set_prop_map[DSI_CMD_SET_MAX] = {
 	"ROI not parsed from DTSI, generated dynamically",
 	"qcom,mdss-dsi-timing-switch-command",
 	"qcom,mdss-dsi-post-mode-switch-on-command",
-	"qcom,mdss-dsi-dispparam-hbm-fod-off-doze-hbm-on-command",
-	"qcom,mdss-dsi-dispparam-hbm-fod-off-doze-lbm-on-command",
 	"qcom,mdss-dsi-dispparam-hbm-on-command",
 	"qcom,mdss-dsi-dispparam-hbm-off-command",
 };
@@ -2051,8 +2039,6 @@ const char *cmd_set_state_map[DSI_CMD_SET_MAX] = {
 	"ROI not parsed from DTSI, generated dynamically",
 	"qcom,mdss-dsi-timing-switch-command-state",
 	"qcom,mdss-dsi-post-mode-switch-on-command-state",
-	"qcom,mdss-dsi-dispparam-hbm-fod-off-doze-hbm-on-command-state",
-	"qcom,mdss-dsi-dispparam-hbm-fod-off-doze-lbm-on-command-state",
 	"qcom,mdss-dsi-dispparam-hbm-on-command-state",
 	"qcom,mdss-dsi-dispparam-hbm-off-command-state",
 };
