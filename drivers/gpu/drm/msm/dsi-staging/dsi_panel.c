@@ -4217,8 +4217,6 @@ int dsi_panel_set_lp2(struct dsi_panel *panel)
 
 int dsi_panel_set_nolp(struct dsi_panel *panel)
 {
-	panel->doze_status = false;
-
 	int rc = 0;
 
 	if (!panel) {
@@ -4230,10 +4228,18 @@ int dsi_panel_set_nolp(struct dsi_panel *panel)
 		return 0;
 
 	mutex_lock(&panel->panel_lock);
+
 	rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_NOLP);
 	if (rc)
 		pr_err("[%s] failed to send DSI_CMD_SET_NOLP cmd, rc=%d\n",
 		       panel->name, rc);
+
+	/* Adjust doze brightness using dts nodes.
+	 * Update one last time right after command was sent
+	 * to mitigate flickering.
+	 */
+	u32 bl_lvl = dsi_panel_get_backlight(panel);
+	dsi_panel_update_backlight(panel, bl_lvl);
 
 	/* Restore HBM mode when it is enabled by user */
 	if (panel->hbm_enabled) {
@@ -4244,6 +4250,9 @@ int dsi_panel_set_nolp(struct dsi_panel *panel)
 	}
 
 	mutex_unlock(&panel->panel_lock);
+
+	panel->doze_status = false;
+
 	return rc;
 }
 
