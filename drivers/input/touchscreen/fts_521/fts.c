@@ -207,7 +207,7 @@ static ssize_t fts_fwupdate_store(struct device *dev,
 				  const char *buf, size_t count)
 {
 	int ret, mode[2];
-	char path[100];
+	char path[101];
 	struct fts_ts_info *info = dev_get_drvdata(dev);
 
 	/* by default(if not specified by the user) set the force = 0 and keep_cx to 1 */
@@ -3052,8 +3052,8 @@ static const char *fts_get_config(struct fts_ts_info *info)
 	ret |= fts_enableInterrupt();
 
 	for (i = 0; i < pdata->config_array_size; i++) {
-		if ((info->lockdown_info[0] ==
-		     pdata->config_array[i].tp_vendor))
+		if (info->lockdown_info[0] ==
+		    pdata->config_array[i].tp_vendor)
 			break;
 	}
 
@@ -3083,8 +3083,8 @@ static const char *fts_get_limit(struct fts_ts_info *info)
 	ret |= fts_enableInterrupt();
 
 	for (i = 0; i < pdata->config_array_size; i++) {
-		if ((info->lockdown_info[0] ==
-		     pdata->config_array[i].tp_vendor))
+		if (info->lockdown_info[0] ==
+		    pdata->config_array[i].tp_vendor)
 			break;
 	}
 
@@ -3206,7 +3206,7 @@ int fts_fw_update(struct fts_ts_info *info, const char *fw_name, int force)
 			 tag, __func__, ret);
 	}
 
-	if ((init_type == NO_INIT)) {
+	if (init_type == NO_INIT) {
 #ifdef PRE_SAVED_METHOD
 		if (systemInfo.u8_cfgAfeVer != systemInfo.u8_cxAfeVer) {
 			init_type = SPECIAL_FULL_PANEL_INIT;
@@ -4982,7 +4982,6 @@ static int fts_probe(struct spi_device *client)
 	logError(1, "%s Probe Finished! \n", tag);
 	return OK;
 
-ProbeErrorExit_8:
 ProbeErrorExit_7:
 #ifdef CONFIG_DRM
 	msm_drm_unregister_client(&info->notifier);
